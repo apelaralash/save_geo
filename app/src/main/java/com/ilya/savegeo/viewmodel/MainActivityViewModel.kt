@@ -52,6 +52,9 @@ class MainActivityViewModel @Inject constructor(
     private val _selectedRouteMarkers = MutableStateFlow<List<MarkerEntity>>(emptyList())
     val selectedRouteMarkers = _selectedRouteMarkers.asStateFlow()
 
+    private val _pathIsUpdated = MutableStateFlow(false)
+    val pathIsUpdated = _pathIsUpdated.asStateFlow()
+
     fun setServiceState(isActive: Boolean) {
         viewModelScope.launch {
             _isServiceActive.value = isActive
@@ -125,6 +128,8 @@ class MainActivityViewModel @Inject constructor(
                     LatLng(it.latitude, it.longitude)
                 }
 
+                _pathIsUpdated.value = true
+
                 if (locations.isNotEmpty()) {
                     withContext(Dispatchers.IO) {
                         val totalDistance = calculateTotalDistance(locations)
@@ -140,6 +145,14 @@ class MainActivityViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun onNewLocationReceived(latitude: Double, longitude: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedPath = _path.value.toMutableList()
+            updatedPath.add(LatLng(latitude, longitude))
+            _path.value = updatedPath
         }
     }
 
@@ -168,7 +181,12 @@ class MainActivityViewModel @Inject constructor(
             _path.value = locationDao.getLocationsForRoute(routeId).map {
                 LatLng(it.latitude, it.longitude)
             }
+            _pathIsUpdated.value = true
         }
+    }
+
+    fun setPathUpdatedFalse() {
+        _pathIsUpdated.value = false
     }
 
     fun updateMarkers(routeId: Int) {

@@ -94,6 +94,7 @@ class LocationTrackingService : Service() {
             routeId = routeId
         )
 
+        broadcastLocationUpdate(latitude, longitude)
         CoroutineScope(Dispatchers.IO).launch {
             locationDao.insertLocation(locationEntity)
         }
@@ -114,6 +115,14 @@ class LocationTrackingService : Service() {
     private fun sendServiceState(isActive: Boolean) {
         val intent = Intent("SERVICE_STATE_ACTION").apply {
             putExtra("isServiceActive", isActive)
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    private fun broadcastLocationUpdate(latitude: Double, longitude: Double) {
+        val intent = Intent("LOCATION_UPDATE_ACTION").apply {
+            putExtra("latitude", latitude)
+            putExtra("longitude", longitude)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }

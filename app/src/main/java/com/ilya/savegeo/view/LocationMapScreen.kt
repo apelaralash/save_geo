@@ -57,7 +57,6 @@ import com.ilya.savegeo.viewmodel.MainActivityViewModel
 @Composable
 fun LocationMapScreen(
     viewModel: MainActivityViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
 ) {
     val locationPermissionState =
         rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -70,6 +69,7 @@ fun LocationMapScreen(
     val recordedLocations by viewModel.path.collectAsState()
     val selectedRoute by viewModel.selectedRoute.collectAsState()
     val markers by viewModel.selectedRouteMarkers.collectAsState()
+    val pathIsUpdated by viewModel.pathIsUpdated.collectAsState()
     var isInitialCameraPositionSet by remember { mutableStateOf(false) }
 
     var showAddMarkerDialog by remember { mutableStateOf(false) }
@@ -93,6 +93,22 @@ fun LocationMapScreen(
             }
         }
         val filter = IntentFilter("SERVICE_STATE_ACTION")
+        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
+
+        onDispose {
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val latitude = intent.getDoubleExtra("latitude", 0.0)
+                val longitude = intent.getDoubleExtra("longitude", 0.0)
+                viewModel.onNewLocationReceived(latitude, longitude)
+            }
+        }
+        val filter = IntentFilter("LOCATION_UPDATE_ACTION")
         LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
 
         onDispose {
@@ -135,11 +151,12 @@ fun LocationMapScreen(
                     }
                 }
 
-                LaunchedEffect(recordedLocations) {
-                    if (recordedLocations.isNotEmpty()) {
+                LaunchedEffect(selectedRoute, pathIsUpdated) {
+                    if (recordedLocations.isNotEmpty() && pathIsUpdated) {
                         cameraPositionState.position =
                             CameraPosition.fromLatLngZoom(recordedLocations[0], 15f)
                     }
+                    viewModel.setPathUpdatedFalse()
                 }
 
                 LaunchedEffect(currentLatLng) {

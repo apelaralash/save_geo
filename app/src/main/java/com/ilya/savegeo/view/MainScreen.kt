@@ -79,7 +79,7 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                LocationMapScreen(viewModel, Modifier.fillMaxSize())
+                LocationMapScreen(viewModel)
             }
         }
     }
